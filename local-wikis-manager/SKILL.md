@@ -28,6 +28,7 @@ description: 管理本地 wikis 文档库的新增、查找、修改操作。当
 
 1. **wikis 路径**: 从指令中提取路径。如果用户没有说明知识库的路径，**必须询问用户**确认路径，不能使用默认值。
 2. **操作类型**: 
+   - 包含"初始化"、"新建知识库" → wikis-init
    - 包含"新增"、"创建"、"输出"、"总结" → wikis-create
    - 包含"搜索"、"查找" → wikis-search
    - 包含"修改"、"编辑"、"更新" → wikis-edit
@@ -38,6 +39,7 @@ description: 管理本地 wikis 文档库的新增、查找、修改操作。当
 
 | 操作 | Subskill |
 |------|----------|
+| 初始化知识库 | `subskills/wikis-init.md` |
 | 新增文档 | `subskills/wikis-create.md` |
 | 查找文档 | `subskills/wikis-search.md` |
 | 修改文档 | `subskills/wikis-edit.md` |
