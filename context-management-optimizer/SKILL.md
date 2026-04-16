@@ -56,6 +56,7 @@ description: 用于优化上下文管理的 skills（project-context-initializer
 ### 步骤 4：提出改进建议
 
 向用户解释发现的问题和可能的改进方案：
+> 特别注意：对于 skill 的修改，不要打太多的补丁，要有总结归纳
 
 ```
 我分析了问题，发现可能的原因有：
