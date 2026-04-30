@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# tests/e2e/<feature>.sh
+#
+# E2E scenarios for <feature>. Driven by agent-browser, attached to
+# the user's running Chrome via --auto-connect.
+#
+# See harness-kit:e2e-testing/SKILL.md for:
+#   - Why we attach to the user's Chrome (Browser Session Strategy)
+#   - The two-phase destructive-action gate (destructive-gate-protocol.md)
+#   - The subagent dispatch protocol  (subagent-protocol.md)
+#
+# Usage: ./tests/e2e/<feature>.sh AS-N
+#
+# Prereq: Chrome AND the target app must already be running. This
+# script does NOT start either of them — see Connection Failure
+# Protocol in SKILL.md.
+
+set -euo pipefail
+
+AS="${1:?usage: $0 AS-N}"
+FEATURE="<feature>"
+# Allow the parent to pin TS during a destructive-gate re-dispatch so
+# the regenerated ack_token matches Phase 1 (see destructive-gate-protocol.md).
+TS="${E2E_TS_OVERRIDE:-$(date -u +%Y%m%dT%H%M%SZ)}"
+EVIDENCE_DIR="tests/e2e/.evidence/${FEATURE}/${TS}-${AS}"
+mkdir -p "${EVIDENCE_DIR}"
+echo "evidence: ${EVIDENCE_DIR}"
+
+# Mandatory: every agent-browser call attaches to the user's running
+# Chrome. Verify the exact flag in `agent-browser skills get core`
+# if a future version renames it.
+AB_FLAGS="--auto-connect"
+
+# Two-phase destructive-action gate. See destructive-gate-protocol.md
+# for the full protocol. Leave defined even if no AS in this feature
+# is destructive — it costs nothing unused.
+_destructive_gate() {
+  local desc="$1" resource="$2"
+  local slug
+  slug=$(echo "${desc}" | tr -c 'a-zA-Z0-9' '-' | cut -c1-30)
+  local token="${AS}-${slug}-${TS}"
+  if [[ "${E2E_DESTRUCTIVE_ACK:-}" == "${token}" ]]; then
+    return 0
+  fi
+  local current_url
+  current_url=$(agent-browser ${AB_FLAGS} url)
+  echo "DESTRUCTIVE_GATE: action=${desc}; url=${current_url}; resource=${resource}; ack_token=${token}"
+  exit 75
+}
+
+case "${AS}" in
+  AS-1)
+    # Given / When / Then for AS-1 — written from the spec.
+    # Use agent-browser commands as documented by:
+    #   agent-browser skills get core
+    # (or `... electron` for desktop targets)
+    #
+    # Every agent-browser call must use ${AB_FLAGS}.
+    # Locate elements via the accessibility tree / @eN refs.
+    # Do NOT use raw CSS selectors, xpath, or pixel coordinates.
+    # Destructive actions: precede with `_destructive_gate "<desc>" "<resource>"`.
+    :
+    ;;
+  AS-2)
+    :
+    ;;
+  *)
+    echo "unknown scenario: ${AS}" >&2
+    exit 64
+    ;;
+esac

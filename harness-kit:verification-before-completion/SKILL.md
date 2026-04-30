@@ -48,6 +48,7 @@ Skip any step = lying, not verifying
 | Regression test works | Red-green cycle verified | Test passes once |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
+| E2E feature complete | For every `AS-N` in spec's `## E2E Strategy`: a fresh subagent JSON report with `phase: "OUTER_GREEN"`, `exit_code: 0`, `auto_connect_used: true`, evidence dir present | Unit tests pass / "looks right" / older e2e run / screenshot from yesterday |
 
 ## Red Flags - STOP
 
@@ -103,6 +104,18 @@ Skip any step = lying, not verifying
 ```
 ✅ Agent reports success → Check VCS diff → Verify changes → Report actual state
 ❌ Trust agent report
+```
+
+**E2E (when spec lists AS-N scenarios):**
+```
+✅ For each AS-N: dispatch harness-kit:e2e-testing subagent →
+   receive fresh JSON report → verify phase="OUTER_GREEN",
+   exit_code=0, auto_connect_used=true, evidence_dir exists →
+   THEN claim "AS-N passes"
+❌ "Unit tests pass, e2e probably works"
+❌ Quoting an evidence dir from an older session
+❌ Accepting auto_connect_used=false (means subagent bypassed --auto-connect — reject and re-dispatch)
+❌ Accepting phase="AWAITING_DESTRUCTIVE_ACK" as completion (it's a pause; complete the two-phase round-trip first)
 ```
 
 ## Why This Matters

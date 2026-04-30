@@ -25,10 +25,11 @@ You MUST create a task for each of these items and complete them in order:
 2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
 4. **Present design** — in sections scaled to their complexity, get user approval after each section
-5. **Write design doc** — save to `docs/harness-kit/specs/YYYY-MM-DD-<topic>-design.md` and commit
-6. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
-7. **User reviews written spec** — ask user to review the spec file before proceeding
-8. **Transition to implementation** — invoke writing-plans skill to create implementation plan
+5. **Decide E2E Strategy** — does this feature have user-visible behavior (Web/Electron)? If yes, list `AS-N` Acceptance Scenarios; if no, mark `EXEMPT: <reason>`. This becomes a mandatory section in the spec — see "E2E Strategy Section" under "After the Design"
+6. **Write design doc** — save to `docs/harness-kit/specs/YYYY-MM-DD-<topic>-design.md` and commit
+7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
+8. **User reviews written spec** — ask user to review the spec file before proceeding
+9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
 
 ## Process Flow
 
@@ -39,6 +40,7 @@ digraph brainstorming {
     "Propose 2-3 approaches" [shape=box];
     "Present design sections" [shape=box];
     "User approves design?" [shape=diamond];
+    "Decide E2E Strategy\n(AS-N list or EXEMPT)" [shape=box];
     "Write design doc" [shape=box];
     "Spec self-review\n(fix inline)" [shape=box];
     "User reviews spec?" [shape=diamond];
@@ -49,7 +51,8 @@ digraph brainstorming {
     "Propose 2-3 approaches" -> "Present design sections";
     "Present design sections" -> "User approves design?";
     "User approves design?" -> "Present design sections" [label="no, revise"];
-    "User approves design?" -> "Write design doc" [label="yes"];
+    "User approves design?" -> "Decide E2E Strategy\n(AS-N list or EXEMPT)" [label="yes"];
+    "Decide E2E Strategy\n(AS-N list or EXEMPT)" -> "Write design doc";
     "Write design doc" -> "Spec self-review\n(fix inline)";
     "Spec self-review\n(fix inline)" -> "User reviews spec?";
     "User reviews spec?" -> "Write design doc" [label="changes requested"];
@@ -107,6 +110,35 @@ digraph brainstorming {
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 
+**E2E Strategy Section (mandatory in every spec):**
+
+Every spec must include an `## E2E Strategy` section, even if the answer is "no e2e". This section is what `harness-kit:writing-plans` reads to decide whether to schedule Outside-In tasks via `harness-kit:e2e-testing`. Use one of these two forms:
+
+```markdown
+## E2E Strategy
+
+- AS-1: <Given/When/Then sentence describing one user-visible scenario>
+- AS-2: <another scenario, e.g. an error / edge state>
+- AS-3: ...
+```
+
+Or, if the feature has no user-visible behavior:
+
+```markdown
+## E2E Strategy
+
+EXEMPT: <one-line reason — e.g. "pure backend API consumed only by other services", "internal CLI tool with no UI", "build script with no runtime UI">
+```
+
+Rules:
+
+- Empty section / no section / "TBD" / "to be decided" — all forbidden. `harness-kit:writing-plans` will refuse to proceed and bounce the spec back here.
+- AS-N labels are sequential within the feature (`AS-1`, `AS-2`, ...) and become the dispatch keys in `tests/e2e/<feature>.sh AS-N`. Gaps allowed if you remove a scenario during revision.
+- Every error / edge state from the design that has a user-visible signal gets its own AS — don't bury "and on bad input show this error" inside the happy-path AS.
+- For destructive flows (account deletion, sending real emails, etc.), call them out explicitly in the AS text — `harness-kit:e2e-testing` has a special two-phase confirmation gate for these.
+
+If you (during step 5 of the checklist) find the feature has user-visible behavior but you can't produce concrete AS-N statements, that's a sign the design isn't done — go back and refine.
+
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
 
@@ -114,6 +146,7 @@ After writing the spec document, look at it with fresh eyes:
 2. **Internal consistency:** Do any sections contradict each other? Does the architecture match the feature descriptions?
 3. **Scope check:** Is this focused enough for a single implementation plan, or does it need decomposition?
 4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
+5. **E2E Strategy presence:** Is there a `## E2E Strategy` section with either a non-empty `AS-N` list OR `EXEMPT: <reason>`? If missing or empty, fix before handing off — `writing-plans` will reject otherwise.
 
 Fix any issues inline. No need to re-review — just fix and move on.
 
