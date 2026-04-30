@@ -13,7 +13,7 @@ Refer to the project context produced by `harness-kit:context-acquiring` skill f
 If you think the context is not enough, then call `harness-kit:context-acquiring` skill again to update the context file for **this specific requirement**
 </HARD-GATE>
 
-Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write comprehensive implementation plans assuming the engineer has zero context for our codebase and questionable taste. Document everything they need to know: which files to touch for each task, code, testing, docs they might need to check, how to test it. Give them the whole plan as bite-sized tasks. DRY. YAGNI. TDD. After each task, report completion to the user — never commit on their behalf.
 
 Assume they are a skilled developer, but know almost nothing about our toolset or problem domain. Assume they don't know good test design very well.
 
@@ -52,7 +52,9 @@ This structure informs the task decomposition. Each task should produce self-con
 - "Run it to make sure it fails" - step
 - "Implement the minimal code to make the test pass" - step
 - "Run the tests and make sure they pass" - step
-- "Commit" - step
+- "Report task completion to the user (do NOT commit)" - step
+
+The plan never tells the executor to run `git commit`. Whether and when to commit is the user's call — the final step of every task only *reports* what changed and *suggests* a commit command the user can run themselves. See "Report Completion Step Template" below.
 
 ## Plan Document Header
 
@@ -107,12 +109,28 @@ def function(input):
 Run: `pytest tests/path/test.py::test_name -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Report task completion (do NOT commit)**
 
-```bash
-git add tests/path/test.py src/path/file.py
-git commit -m "feat: add specific feature"
-```
+Tell the user, verbatim:
+
+> Task <N> complete.
+>
+> **Files changed:**
+> - `tests/path/test.py` (new)
+> - `src/path/file.py` (modified)
+>
+> **Verification:** `pytest tests/path/test.py::test_name -v` → PASS
+>
+> **Suggested commit (run yourself if you want it):**
+>
+> ```bash
+> git add tests/path/test.py src/path/file.py
+> git commit -m "feat: add specific feature"
+> ```
+>
+> Reply `next` to start Task <N+1>, or commit / inspect / change anything first.
+
+Then **stop and wait** for the user before starting the next task. Do not run `git commit` yourself, even if you previously did so in this session.
 ````
 
 ## Outside-In Tasks for E2E
@@ -166,15 +184,69 @@ Same dispatch as Step 3. Expected: JSON with `phase: "OUTER_GREEN"`, `exit_code:
 
 If `phase` is `AWAITING_DESTRUCTIVE_ACK`, follow `harness-kit:e2e-testing/destructive-gate-protocol.md` two-phase flow before proceeding.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Report task completion (do NOT commit)**
 
-```bash
-git add tests/e2e/<feature>.sh <inner-impl-files>
-git commit -m "feat(<feature>): AS-<M> <scenario summary>"
-```
+Tell the user, verbatim:
+
+> Task <N> (AS-<M>) complete.
+>
+> **Files changed:**
+> - `tests/e2e/<feature>.sh` (new or modified `case AS-<M>)` branch)
+> - `<inner-impl-files>` (modified)
+>
+> **Verification:** subagent JSON report → `phase: "OUTER_GREEN"`, `exit_code: 0`, `auto_connect_used: true`
+>
+> **Suggested commit (run yourself if you want it):**
+>
+> ```bash
+> git add tests/e2e/<feature>.sh <inner-impl-files>
+> git commit -m "feat(<feature>): AS-<M> <scenario summary>"
+> ```
+>
+> Reply `next` to start the next task, or commit / inspect / change anything first.
+
+Then **stop and wait** for the user before starting the next task.
 ````
 
 If a single feature has multiple AS-N, you may share the inner-loop tasks across them — order the plan so the first Outside-In task scaffolds the script and exercises the inner loop fully, and later Outside-In tasks for the same feature only add new `case AS-<M>)` branches and re-use the existing implementation.
+
+## Report Completion Step Template
+
+Every task ends with a `Report task completion (do NOT commit)` step. Use this exact structure when writing it into a plan:
+
+````markdown
+- [ ] **Step <last>: Report task completion (do NOT commit)**
+
+Tell the user, verbatim:
+
+> Task <N> complete.
+>
+> **Files changed:**
+> - `<path>` (new | modified | deleted)
+> - ...
+>
+> **Verification:** <the exact command + expected outcome from the previous step>
+>
+> **Suggested commit (run yourself if you want it):**
+>
+> ```bash
+> git add <paths>
+> git commit -m "<conventional-commit message>"
+> ```
+>
+> Reply `next` to start Task <N+1>, or commit / inspect / change anything first.
+
+Then **stop and wait** for the user before starting the next task. Do not run `git commit`, `git push`, `git merge`, or `gh pr create` on the user's behalf in this skill — those decisions belong to the user.
+````
+
+**Why this shape:**
+
+- The user often wants to inspect the diff, batch multiple tasks into one commit, or use a different message than you'd suggest. Pre-running `git commit` strips that choice.
+- Listing the files explicitly tells the user exactly what to expect from `git status` — they can sanity-check that you didn't touch anything outside scope before they commit.
+- Suggesting a `git add` / `git commit -m` pair (rather than just a message) means the user can copy-paste in one shot if they agree with your suggestion.
+- The `next` reply is a simple, unambiguous resume signal — anything else (silence, "looks good", a question) means the user is still thinking, so don't barrel into Task N+1.
+
+If the user has shipped a CLAUDE.md / AGENTS.md instruction explicitly authorizing auto-commits, *that* overrides this rule (per the priority chain in `harness-kit:start`). Default behavior is no auto-commit.
 
 ## No Placeholders
 
@@ -190,7 +262,8 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - Exact file paths always
 - Complete code in every step — if a step changes code, show the code
 - Exact commands with expected output
-- DRY, YAGNI, TDD, frequent commits
+- DRY, YAGNI, TDD
+- Every task ends with a `Report task completion (do NOT commit)` step — never `git commit` on the user's behalf
 - Refer the general project context produced by `harness-kit:context-acquiring` skill
 
 ## Self-Review

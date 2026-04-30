@@ -285,8 +285,8 @@ This directory is the **only** acceptable evidence that a scenario "just ran" �
 
 **Retention rules:**
 - Stays on disk during the entire feature's development.
-- Never enters git (see **First-Run Setup** below).
-- Cleaned up only by `harness-kit:finishing-a-development-branch` Step 5.5, with explicit user confirmation (`cleanup-evidence` / `keep`). Sleeves of unconfirmed evidence accumulate across features — that is intentional. The user is the only one who decides when an investigation is "done".
+- Never enters git. Initial gate: **First-Run Setup** below (refuses to scaffold without `.gitignore` coverage). Late sanity-check: `harness-kit:finishing-a-development-branch` Step 2 (warns if the gitignore drifted or any evidence path got tracked anyway).
+- Disk cleanup is the user's call — `rm -rf tests/e2e/.evidence/<feature>/` whenever they want. No skill in harness-kit deletes evidence on the user's behalf. Sleeves of evidence accumulating across features is intentional; it gives the user a complete debugging trail until they explicitly clear it.
 
 ## First-Run Setup
 
@@ -307,7 +307,22 @@ Before creating `tests/e2e/<feature>.sh` for the first time in a project, agent 
    >
    > OK to append? (yes / no)
 
-5. On `yes`: append the line and the comment `# harness-kit:e2e-testing — runtime evidence, never commit`. Commit `.gitignore` separately from any feature code.
+5. On `yes`: append the line and the comment `# harness-kit:e2e-testing — runtime evidence, never commit`. **Do NOT commit `.gitignore` yourself.** Tell the user:
+
+   > `.gitignore` updated to exclude `tests/e2e/.evidence/`.
+   >
+   > **Files changed:**
+   > - `.gitignore` (modified)
+   >
+   > **Suggested commit (run yourself if you want it; keep this separate from feature code):**
+   >
+   > ```bash
+   > git add .gitignore
+   > git commit -m "chore: ignore e2e evidence directory"
+   > ```
+   >
+   > I'll proceed with scaffolding the e2e script now — you can commit `.gitignore` whenever convenient.
+
 6. On `no`: **do not** create the script. Tell the user:
 
    > Cannot proceed without the gitignore entry — running e2e would dirty the working tree with binary artifacts. Please either approve the append or add an equivalent rule yourself, then re-invoke.
@@ -399,7 +414,7 @@ Cannot check all boxes? You skipped the discipline. Restart from OUTER RED.
 | "I'll write the e2e after the UI works" | E2e written after the UI passes immediately. Proves nothing. Same trap as inner-TDD-after. |
 | "Connection error counts as RED" | No. Connection error = environment broken. RED means the assertion you wrote was reached and failed. |
 | "I'll just `npm run dev` myself, faster than asking" | Pollutes the user's shell, hides port collisions, breaks the user's expectation that you don't take over their dev loop. STOP and ask. |
-| "Evidence is just clutter, let me delete it now" | Cleanup is the user's decision and only happens during `finishing-a-development-branch`. Premature deletion destroys debugging trails. |
+| "Evidence is just clutter, let me delete it now" | Disk cleanup is the user's decision, full stop — no harness-kit skill deletes evidence on the user's behalf. Premature deletion destroys debugging trails. |
 | "I'll mock the API, the UI is what matters" | Then it's not e2e. It's a component test. Use unit TDD for that. |
 | "CSS selector is more reliable than a11y" | If a11y can't find it, the UI has an accessibility bug — fix the UI, not the test. |
 | "One scenario covers everything, splitting is overkill" | Per-AS dispatch is what makes failures localizable and re-runnable. Keep the `case`. |
@@ -439,7 +454,7 @@ All of these mean: stop, undo, restart from the right step.
 
 **Outputs consumed by:**
 - `harness-kit:verification-before-completion` — checks evidence dir for fresh runs of every `AS-N`
-- `harness-kit:finishing-a-development-branch` — Step 1.5 re-runs all `AS-N`; Step 5.5 cleans evidence with confirmation
+- `harness-kit:finishing-a-development-branch` — Step 1.5 re-runs all `AS-N`; Step 2 sanity-checks `.gitignore` still covers `tests/e2e/.evidence/` (warns on drift, never deletes)
 
 ## The Bottom Line
 

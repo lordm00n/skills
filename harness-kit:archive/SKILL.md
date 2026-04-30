@@ -37,7 +37,7 @@ digraph archiving {
     "User approves summary + deletions?" [shape=diamond];
     "Write archive file" [shape=box];
     "Delete originals" [shape=box];
-    "Commit" [shape=doublecircle];
+    "Report + suggest commit" [shape=doublecircle];
 
     "Identify topic" -> "Discover candidate docs";
     "Discover candidate docs" -> "User picks scope";
@@ -47,7 +47,7 @@ digraph archiving {
     "User approves summary + deletions?" -> "Synthesize archive summary" [label="changes requested"];
     "User approves summary + deletions?" -> "Write archive file" [label="approved"];
     "Write archive file" -> "Delete originals";
-    "Delete originals" -> "Commit";
+    "Delete originals" -> "Report + suggest commit";
 }
 ```
 
@@ -132,24 +132,36 @@ rm <path>
 
 Before each `rm`, sanity-check the path: it MUST sit under `docs/harness-kit/{specs,plans,context}/` or `docs/superpowers/{specs,plans}/`. If a path under `docs/prds/` somehow reached this step, abort the entire delete loop and report the bug — that's a HARD-GATE violation upstream and silently honoring it is worse than failing loudly.
 
-### Step 8: Commit
+### Step 8: Report and Suggest Commit (do NOT commit)
 
-Make a single commit covering the new archive file and the deletions. Use `git add -A` on the relevant paths so both the new archive and any deleted-but-tracked originals are staged:
+Tell the user, verbatim:
 
-```bash
-git add -A docs/harness-kit/archive/YYYY-MM-DD-<slug>.md \
-          docs/harness-kit/specs/ \
-          docs/harness-kit/plans/ \
-          docs/harness-kit/context/
+> Archive complete.
+>
+> **Files changed:**
+> - `docs/harness-kit/archive/YYYY-MM-DD-<slug>.md` (new)
+> - `docs/harness-kit/specs/<deleted-spec-path>` (deleted)
+> - `docs/harness-kit/plans/<deleted-plan-path>` (deleted)
+> - `docs/harness-kit/context/<deleted-context-path>` (deleted, if applicable)
+>
+> **Suggested commit (run yourself if you want it):**
+>
+> ```bash
+> git add -A docs/harness-kit/archive/YYYY-MM-DD-<slug>.md \
+>           docs/harness-kit/specs/ \
+>           docs/harness-kit/plans/ \
+>           docs/harness-kit/context/
+>
+> git commit -m "docs(archive): archive <slug>
+>
+> Summarize spec + plan into docs/harness-kit/archive/YYYY-MM-DD-<slug>.md
+> and remove originals. Implementation shipped; full history preserved
+> in git log."
+> ```
+>
+> The archive file is written and the originals are deleted on disk; whether to commit (and with what message) is up to you. Original content is recoverable via `git log --diff-filter=D -- <path>` until you commit the deletion.
 
-git commit -m "docs(archive): archive <slug>
-
-Summarize spec + plan into docs/harness-kit/archive/YYYY-MM-DD-<slug>.md
-and remove originals. Implementation shipped; full history preserved
-in git log."
-```
-
-If the user's project disallows committing from agents (check `.agents/rules.md`), skip the commit, stage the changes, and report the staged state to the user.
+Do **not** run `git add` or `git commit` yourself. The user decides whether to commit, when, and with what message — same convention as every other harness-kit skill.
 
 ## Archive File Template
 

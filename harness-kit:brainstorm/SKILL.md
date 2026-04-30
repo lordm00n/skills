@@ -26,7 +26,7 @@ You MUST create a task for each of these items and complete them in order:
 3. **Propose 2-3 approaches** — with trade-offs and your recommendation
 4. **Present design** — in sections scaled to their complexity, get user approval after each section
 5. **Decide E2E Strategy** — does this feature have user-visible behavior (Web/Electron)? If yes, list `AS-N` Acceptance Scenarios; if no, mark `EXEMPT: <reason>`. This becomes a mandatory section in the spec — see "E2E Strategy Section" under "After the Design"
-6. **Write design doc** — save to `docs/harness-kit/specs/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Write design doc** — save to `docs/harness-kit/specs/YYYY-MM-DD-<topic>-design.md` (do NOT commit — the user decides whether and when to commit)
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
@@ -108,7 +108,7 @@ digraph brainstorming {
 - Write the validated design (spec) to `docs/harness-kit/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
 - Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- **Do NOT commit the design document yourself.** Tell the user the file is written and suggest a commit command (see "User Review Gate" below). The user decides whether to commit, when, and with what message.
 
 **E2E Strategy Section (mandatory in every spec):**
 
@@ -151,11 +151,23 @@ After writing the spec document, look at it with fresh eyes:
 Fix any issues inline. No need to re-review — just fix and move on.
 
 **User Review Gate:**
-After the spec review loop passes, ask the user to review the written spec before proceeding:
+After the spec review loop passes, ask the user to review the written spec before proceeding. Use this format so the user has everything they need to decide on a commit:
 
-> "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
+> Spec written to `<path>` (not committed).
+>
+> **Files changed:**
+> - `<path>` (new)
+>
+> **Suggested commit (run yourself if you want it):**
+>
+> ```bash
+> git add <path>
+> git commit -m "docs(spec): <one-line topic summary>"
+> ```
+>
+> Please review the spec and let me know if you want to make any changes before we start writing out the implementation plan.
 
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
+Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves. Whether they commit (now, later, or never) is their call — do not commit on their behalf unless they explicitly ask.
 
 **Implementation:**
 

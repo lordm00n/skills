@@ -28,13 +28,18 @@ For each task:
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
 4. Mark as completed
+5. **Hand control back to the user at the task boundary.** The plan's final step of every task is `Report task completion (do NOT commit)` — emit that report verbatim (file list + verification result + suggested commit command) and **stop**. Do not start the next task until the user replies (typically `next`, but they may want to commit, inspect the diff, or revise something first).
+
+**Why the per-task pause:** plans are written assuming the user wants control over commit boundaries — batching, message wording, skipping a commit entirely, etc. Auto-rolling into Task N+1 silently strips that control. Even if the user said "go" once at the start, treat each task as a fresh checkpoint. If the user explicitly says something like "just blast through all of them, don't ask" you can honor that for the remainder of the session.
+
+**Never run on the user's behalf inside this skill:** `git commit`, `git push`, `git merge`, `gh pr create`. Those belong to the user — and the same is true of every other harness-kit skill, including `harness-kit:finishing-a-development-branch`, which only verifies and reports. If the plan accidentally contains a literal `git commit` step, treat it as a `Report task completion` step instead — surface the suggested command, do not run it, and flag the plan bug to the user.
 
 ### Step 3: Complete Development
 
 After all tasks complete and verified:
 - Announce: "I'm using the harness-kit:finishing-a-development-branch skill to complete this work."
 - **REQUIRED SUB-SKILL:** Use harness-kit:finishing-a-development-branch
-- Follow that skill to verify tests, present options, execute choice
+- That skill will re-verify tests + e2e, sanity-check the e2e evidence is gitignored, then report completion. It will not merge, push, open PRs, or remove anything — whatever the user wants to do next is plain chat after the report.
 
 ## When to Stop and Ask for Help
 
@@ -60,6 +65,8 @@ After all tasks complete and verified:
 - Don't skip verifications
 - Reference skills when plan says to
 - Stop when blocked, don't guess
+- Stop at every task boundary — emit the `Report task completion` message and wait for the user before starting the next task
+- Never run `git commit` / `git push` / `git merge` / `gh pr create` on the user's behalf
 - Never start implementation on main/master branch without explicit user consent
 
 ## Integration

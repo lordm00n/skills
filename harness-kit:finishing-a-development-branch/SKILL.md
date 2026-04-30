@@ -1,15 +1,17 @@
 ---
 name: harness-kit:finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: Use when implementation is complete and all tests pass — verifies tests + e2e, sanity-checks the e2e evidence is still gitignored, then reports completion with a suggested commit command. Does NOT merge, push, open PRs, delete branches, remove worktrees, or delete files; those are the user's call.
 ---
 
 # Finishing a Development Branch
 
 ## Overview
 
-Guide completion of development work by presenting clear options and handling chosen workflow.
+Verify the work is actually done (tests + e2e), make sure no e2e artifacts will accidentally enter git, then **report completion and stop**. The branch is left exactly as-is — no merge, no push, no PR, no branch deletion, no worktree removal. Whatever happens next (commit any pending diff, merge, open a PR, discard, or just leave the branch there) is the user's call to drive — usually in plain chat right after this skill ends.
 
-**Core principle:** Verify tests → Present options → Execute choice → Clean up.
+**Core principle:** Verify → Sanity-check → Report → Stop.
+
+**Why minimalist:** branch finishing is the highest-stakes moment in the cycle. Any auto-action here (merge commit, force-push, branch -D, worktree remove) strips the user's last chance to inspect the diff, pick a merge style, wait for CI, or change their mind. Listing a "menu of options" also creates pressure to pick one *now*, when the realistic answer is often "I'll think about it". Defaulting to keep-as-is + reporting is the safest, least surprising behavior.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
@@ -17,7 +19,7 @@ Guide completion of development work by presenting clear options and handling ch
 
 ### Step 1: Verify Tests
 
-**Before presenting options, verify tests pass:**
+**Before reporting completion, verify tests pass:**
 
 ```bash
 # Run project's test suite
@@ -25,15 +27,16 @@ npm test / cargo test / pytest / go test ./...
 ```
 
 **If tests fail:**
-```
-Tests failing (<N> failures). Must fix before completing:
+
+```text
+Tests failing (<N> failures). Cannot report completion:
 
 [Show failures]
 
-Cannot proceed with merge/PR until tests pass.
+Fix the failures (or revert) before re-invoking this skill.
 ```
 
-Stop. Don't proceed to Step 2.
+Stop. Don't proceed to Step 1.5.
 
 **If tests pass:** Continue to Step 1.5.
 
@@ -65,215 +68,127 @@ For each returned JSON report, accept only when:
 **If any AS-N fails:**
 
 ```text
-E2E failing for AS-<M> (<failing_step>). Must fix before completing:
+E2E failing for AS-<M> (<failing_step>). Cannot report completion:
 
 [Show failing_step + evidence_dir]
 
-Cannot proceed with merge/PR until every AS-N in spec returns
-OUTER_GREEN.
+Fix the inner loop (per harness-kit:test-driven-development) until
+every AS-N in spec returns OUTER_GREEN, then re-invoke this skill.
 ```
 
 Stop. Do not proceed to Step 2.
 
 **If all AS-N pass:** continue to Step 2.
 
-### Step 2: Determine Base Branch
+### Step 2: Sanity-Check E2E Evidence Is Gitignored (when spec was not EXEMPT)
+
+If the spec is `EXEMPT`: skip this step.
+
+Otherwise check that `tests/e2e/.evidence/` is still covered by an active `.gitignore` rule. The original gate for this lives in `harness-kit:e2e-testing` First-Run Setup, but the `.gitignore` may have been edited mid-development, the project structure may have changed, or evidence may have been written to a different location than expected. A late sanity-check costs ~one read and prevents binary artifacts from silently sneaking into the user's next commit.
 
 ```bash
-# Try common base branches
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+# Are any evidence paths currently tracked or unignored?
+git check-ignore -v tests/e2e/.evidence/ 2>/dev/null
+git ls-files --error-unmatch tests/e2e/.evidence/ 2>/dev/null
 ```
 
-Or ask: "This branch split from main - is that correct?"
+**If `tests/e2e/.evidence/` is properly ignored AND no evidence path is tracked:** silent OK, continue to Step 3.
 
-### Step 3: Present Options
-
-Present exactly these 4 options:
-
-```
-Implementation complete. What would you like to do?
-
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
-
-Which option?
-```
-
-**Don't add explanation** - keep options concise.
-
-### Step 4: Execute Choice
-
-#### Option 1: Merge Locally
-
-```bash
-# Switch to base branch
-git checkout <base-branch>
-
-# Pull latest
-git pull
-
-# Merge feature branch
-git merge <feature-branch>
-
-# Verify tests on merged result
-<test command>
-
-# If tests pass
-git branch -d <feature-branch>
-```
-
-Then: Cleanup worktree (Step 5)
-
-#### Option 2: Push and Create PR
-
-```bash
-# Push branch
-git push -u origin <feature-branch>
-
-# Create PR
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Summary
-<2-3 bullets of what changed>
-
-## Test Plan
-- [ ] <verification steps>
-EOF
-)"
-```
-
-Then: Cleanup worktree (Step 5)
-
-#### Option 3: Keep As-Is
-
-Report: "Keeping branch <name>. Worktree preserved at <path>."
-
-**Don't cleanup worktree.**
-
-#### Option 4: Discard
-
-**Confirm first:**
-```
-This will permanently delete:
-- Branch <name>
-- All commits: <commit-list>
-- Worktree at <path>
-
-Type 'discard' to confirm.
-```
-
-Wait for exact confirmation.
-
-If confirmed:
-```bash
-git checkout <base-branch>
-git branch -D <feature-branch>
-```
-
-Then: Cleanup worktree (Step 5)
-
-### Step 5: Cleanup Worktree
-
-**For Options 1, 2, 4:**
-
-Check if in worktree:
-```bash
-git worktree list | grep $(git branch --show-current)
-```
-
-If yes:
-```bash
-git worktree remove <worktree-path>
-```
-
-**For Option 3:** Keep worktree.
-
-### Step 5.5: Cleanup E2E Evidence (when spec was not EXEMPT)
-
-For Options 1, 2, 4 only. Skip for Option 3 (keep-as-is) — the evidence may still be useful while the branch lives.
-
-If `tests/e2e/.evidence/<feature>/` exists, ask the user:
+**If `.gitignore` does NOT cover the evidence dir, or any evidence file shows up under `git ls-files`:** warn the user before reporting completion:
 
 ```text
-About to delete:
-- tests/e2e/.evidence/<feature>/  (<N> timestamped runs, <total-size>)
+WARNING: tests/e2e/.evidence/ is not (or no longer) gitignored.
 
-These are the e2e screenshots / videos / a11y snapshots collected
-during this feature's development. They have already served their
-purpose for verification-before-completion. Keeping them means you
-can still inspect failure traces later; deleting them frees disk
-and keeps the next feature's evidence dir uncluttered.
+Detected:
+- <list the offending paths from git ls-files / git check-ignore output>
 
-Reply EXACTLY:
-  cleanup-evidence    — delete the directory
-  keep                — leave the directory in place
+This is the runtime evidence directory for e2e (screenshots, videos,
+a11y snapshots) — it must NOT enter git. Suggested fix:
 
-Anything else (silence, "yes", "ok", a different word) is treated
-as `keep`.
+  echo 'tests/e2e/.evidence/' >> .gitignore
+  git rm -r --cached tests/e2e/.evidence/   # only if files are already tracked
+
+Resolve this before committing the feature, or the commit will pull
+binary artifacts in.
 ```
 
-Wait for the literal `cleanup-evidence` reply. Only on that exact word:
+Then continue to Step 3 — the warning is informational, not blocking. The user is in control of whether to fix it now or later.
 
-```bash
-rm -rf tests/e2e/.evidence/<feature>/
-```
+Disk cleanup of the evidence directory itself is **not** this skill's concern — `tests/e2e/.evidence/` can grow as large as it wants, the user `rm -rf` it whenever they want. The only durable risk is git pollution, which this step covers.
 
-On `keep`, silence, or any other reply: leave the directory alone and report:
+### Step 3: Report Completion
+
+Output a single completion message and stop:
 
 ```text
-Kept tests/e2e/.evidence/<feature>/ — delete manually when no longer needed.
+Implementation complete on `<feature-branch>`.
+
+Verified:
+- Tests: PASS (<command used>)
+- E2E:   <"all AS-N OUTER_GREEN" | "EXEMPT per spec">
+
+Branch is kept as-is — nothing committed, merged, pushed, or removed.
+
+If you have uncommitted changes you want to commit:
+
+  git status                                   # see what's pending
+  git add <paths>
+  git commit -m "<your message>"
+
+Whatever happens next (commit, merge, PR, discard, or just leave the
+branch sitting there) is yours to drive. Tell me what you want to do —
+I'm happy to draft merge / push / PR / discard commands on request, but
+I won't run any git mutations from inside this skill.
 ```
 
-If `tests/e2e/.evidence/<feature>/` does not exist (no e2e was run, or already cleaned), skip silently.
+Then stop. Do not loop back, do not ask "which option?", do not auto-clean anything else.
 
 ## Quick Reference
 
-| Option | Merge | Push | Keep Worktree | Cleanup Branch | Offer Evidence Cleanup |
-|--------|-------|------|---------------|----------------|------------------------|
-| 1. Merge locally | ✓ | - | - | ✓ | ✓ (Step 5.5) |
-| 2. Create PR | - | ✓ | ✓ | - | ✓ (Step 5.5) |
-| 3. Keep as-is | - | - | ✓ | - | - (keep) |
-| 4. Discard | - | - | - | ✓ (force) | ✓ (Step 5.5) |
+| Step | What the skill does | What the skill never does |
+|------|---------------------|---------------------------|
+| 1. Verify Tests | Runs the project's test command | Skips on green-trust ("looks fine") |
+| 1.5. Verify E2E (non-EXEMPT) | Dispatches `e2e-subagent` per AS-N, accepts only `OUTER_GREEN` | Trusts older evidence dirs, accepts `auto_connect_used: false` |
+| 2. Sanity-check gitignore (non-EXEMPT) | Reads `.gitignore` + `git ls-files` for `tests/e2e/.evidence/`; warns if drift | Deletes evidence files, prompts to clean disk |
+| 3. Report completion | Tells the user the branch is verified + kept as-is, suggests a commit if they have a pending diff | Runs `git commit / merge / push / branch -d / worktree remove`, opens PRs, picks merge styles |
 
 ## Common Mistakes
 
-**Skipping test verification**
-- **Problem:** Merge broken code, create failing PR
-- **Fix:** Always verify tests before offering options
+**Skipping verification because "tests obviously pass"**
+- **Problem:** The whole point of this skill is the verification gate. Skipping it makes the report a lie.
+- **Fix:** Always run Step 1 + Step 1.5. If you can't run them, say that explicitly instead of reporting completion.
 
-**Open-ended questions**
-- **Problem:** "What should I do next?" → ambiguous
-- **Fix:** Present exactly 4 structured options
+**Adding back a "which option?" prompt**
+- **Problem:** Forces the user to pick one of merge/PR/discard *right now*, when the realistic answer is often "I'll think about it after I look at the diff".
+- **Fix:** Just report. The user will tell you what they want next, or do it themselves outside chat.
 
-**Automatic worktree cleanup**
-- **Problem:** Remove worktree when might need it (Option 2, 3)
-- **Fix:** Only cleanup for Options 1 and 4
+**Running git mutations on the user's behalf**
+- **Problem:** Any of `git merge` / `git push` / `gh pr create` / `git branch -D` / `git worktree remove` strips the user's last chance to inspect or change course.
+- **Fix:** Never run them inside this skill. If the user asks for a command in chat after the report, draft it — but they paste/run it.
 
-**No confirmation for discard**
-- **Problem:** Accidentally delete work
-- **Fix:** Require typed "discard" confirmation
+**Treating the gitignore warning as blocking**
+- **Problem:** Refusing to report completion because `.gitignore` drifted hides the actually-good news ("tests + e2e all green") behind a non-blocking config issue.
+- **Fix:** Warn loudly, but still report completion. The user decides whether to fix the gitignore now or later.
 
 ## Red Flags
 
 **Never:**
-- Proceed with failing tests
-- Proceed with any AS-N not at OUTER_GREEN (when spec is not EXEMPT)
-- Merge without verifying tests on result
-- Delete work without confirmation
-- Force-push without explicit request
-- Delete `tests/e2e/.evidence/<feature>/` without literal `cleanup-evidence` confirmation
+- Report completion with failing tests
+- Report completion with any AS-N not at OUTER_GREEN (when spec is not EXEMPT)
+- Run `git merge` / `git push` / `gh pr create` / `git branch -D` / `git worktree remove` yourself
+- Delete anything under `tests/e2e/.evidence/`
+- Re-introduce a "pick an option" interactive menu
 
 **Always:**
-- Verify tests before offering options
-- Verify e2e (Step 1.5) before offering options when spec is not EXEMPT
-- Present exactly 4 options
-- Get typed confirmation for Option 4
-- Get typed `cleanup-evidence` confirmation for Step 5.5
-- Clean up worktree for Options 1 & 4 only
+- Verify tests + e2e (Step 1, Step 1.5) before any "complete" wording
+- Sanity-check the `.gitignore` covers `tests/e2e/.evidence/` (Step 2) when non-EXEMPT
+- Keep the branch and worktree exactly as the user left them
+- Default to suggesting (not running) any git command
 
 ## Integration
 
 **Called by:**
 
-- **harness-kit:execute-plans** (Step 5) - After all batches complete
+- **harness-kit:execute-plans** (Step 3) - After all tasks complete
+
+**Hands control back to:** the user, in plain chat. There is no auto-handoff to merge / PR / archive flows from this skill.
