@@ -1,0 +1,125 @@
+# Unit tests: <module-name>
+
+> **Source spec:** every `UT-N` for this module lives in
+> `{$PROJECT_ROOT_DIR}/harness-kit/specs/<subject-YYYY_MM_DD>/test-category.md`
+> under `## <module-name>`.
+>
+> **Test files under:** `<exact directory or file path>`
+>
+> **Skill:** every change here must follow `harness-kit:tdd` —
+> RED → Verify-RED → GREEN → Verify-GREEN. This README documents the
+> *manual* invocation only; the discipline is in the SKILL.
+
+## What this module tests
+
+<one-paragraph behaviour summary — what contract or invariant of
+the implementation does this module pin down>
+
+## Test cases
+
+| ID   | Case (Given / When / Then)              | File                                      |
+|------|-----------------------------------------|-------------------------------------------|
+| UT-1 | <copy from spec, condensed>             | `tests/<path>/test_<name>.<ext>`          |
+| UT-2 | <error / boundary / edge case>          | `tests/<path>/test_<name>.<ext>`          |
+
+Keep this table aligned with `## <module-name>` in the spec. Drift =
+fix the README, not the spec.
+
+## Prerequisites
+
+### 1. Toolchain
+
+- Test runner: `<pytest | jest | vitest | go test | cargo test | ...>`
+- Install dependencies (run once per checkout):
+
+  ```bash
+  <exact command, e.g. `uv sync` / `npm ci` / `pnpm install --frozen-lockfile` / `cargo build --tests`>
+  ```
+
+- Verify the runner is available:
+
+  ```bash
+  <exact command, e.g. `pytest --version`>
+  ```
+
+### 2. Environment variables
+
+| Variable      | Purpose                                              | Required when                  | Default        |
+|---------------|------------------------------------------------------|--------------------------------|----------------|
+| `<NAME>`      | <what behaviour it controls>                         | <always | only for UT-X>     | `<default>`    |
+
+If this module needs no env vars, replace the table body with
+`None.` and delete the unused rows. **Do NOT leave placeholder rows.**
+
+### 3. Fixtures / external state
+
+- <DB / temp dir / fake API / fixture file paths>, with the exact
+  command to (re)create them. If none, write `None — tests run
+  hermetically.`
+
+## Running
+
+### Run every test in this module
+
+```bash
+<exact command>
+# e.g. pytest tests/<path>/ -v
+```
+
+Expected: every UT-N PASS. No warnings, no stderr noise. Pristine
+output is part of the contract — see `harness-kit:tdd/SKILL.md`
+§ Verify GREEN.
+
+### Run a single UT-N
+
+```bash
+<exact command, parameterized by test name>
+# e.g. pytest tests/<path>/test_<name>.py::test_<case_name> -v
+# or   npx vitest run -t '<case-name>' tests/<path>/<file>.test.ts
+```
+
+Use this form when iterating in the inner TDD loop — RED, then
+GREEN, on one case at a time.
+
+### Watch mode (optional)
+
+```bash
+<exact command>
+# e.g. pytest-watch -- tests/<path>/
+# or   npx vitest watch tests/<path>/
+```
+
+Watch mode is for the GREEN phase only. RED still requires you to
+deliberately run a freshly-written test once and watch it fail.
+
+### Coverage (optional)
+
+```bash
+<exact command>
+# e.g. pytest --cov=src/<module> --cov-report=term-missing tests/<path>/
+```
+
+Coverage is a sanity check, not a goal. Don't write tests for
+coverage; write tests for behaviour.
+
+### How NOT to run
+
+- ✗ Skip the runner cache / re-use a stale snapshot — flaky.
+- ✗ Run with `--no-fail-fast` while in RED phase — defeats "watch
+  it fail at the right step".
+- ✗ Patch out real code paths with mocks just to make a test pass
+  (see `harness-kit:tdd/testing-anti-patterns.md`).
+
+## Expected output
+
+- All UT-N from the table above PASS.
+- No warnings, no deprecated-API noise, no stderr leaks.
+- Each case finishes in <100ms unless explicitly justified in the
+  spec's `Intent` line.
+
+## Related files
+
+- `<implementation file paths under src/>`
+- `{$PROJECT_ROOT_DIR}/harness-kit/specs/<subject-YYYY_MM_DD>/test-category.md`
+  — `## <module-name>` lists every UT-N with `Case` + `Intent`.
+- `harness-kit:tdd/SKILL.md` — full TDD discipline.

@@ -203,6 +203,48 @@ Next failing test for next feature.
 | **Clear** | Name describes behavior | `test('test1')` |
 | **Shows intent** | Demonstrates desired API | Obscures what code should do |
 
+## Test Module README
+
+Every directory that contains test files for a single module MUST also ship a `README.md` next to those tests. It is the *operator's manual* for that module's unit tests — a fresh contributor (human or agent) must be able to run them from a cold checkout using only this file plus the project's standard dev-env setup.
+
+**Path convention.** The README sits next to the tests it documents:
+
+| Test layout                          | README path                          |
+|--------------------------------------|--------------------------------------|
+| `tests/<module>/test_*.py`           | `tests/<module>/README.md`           |
+| `src/<module>/__tests__/*.test.ts`   | `src/<module>/__tests__/README.md`   |
+| `<module>/<module>_test.go`          | `<module>/README.md` (test section)  |
+
+**Scaffold from the template** (`harness-kit:tdd/templates/test-module.README.md.template`):
+
+```bash
+SKILL_DIR=$(dirname "$(readlink -f "<path-to-this-SKILL.md>")")
+mkdir -p tests/<module>
+cp "${SKILL_DIR}/templates/test-module.README.md.template" "tests/<module>/README.md"
+# replace `<module-name>` and other placeholders
+```
+
+**Required sections (verbatim from the template):**
+
+1. **Header back-pointer** — links to the spec's `## <module-name>` block in `test-category.md` and to `harness-kit:tdd/SKILL.md`.
+2. **What this module tests** — one paragraph of behaviour, *not* implementation.
+3. **Test cases table** — every `UT-N` from the spec with its Given/When/Then summary and the file it lives in. Stays aligned with the spec.
+4. **Prerequisites**:
+   - Toolchain: the test runner with the exact `--version` check, plus the exact `install dependencies` command for a cold checkout (`uv sync` / `npm ci` / `cargo build --tests` / etc.). **No "see project README"** — repeat the command here.
+   - Env-var table: `Variable / Purpose / Required when / Default`. If none, write `None.` literally — do not leave placeholder rows.
+   - Fixtures / external state: any DB, temp dir, fake API, fixture file, with the exact recreate command. If hermetic, say so explicitly.
+5. **Running**:
+   - Run every test in this module — exact command.
+   - Run a single `UT-N` — exact command, parameterized by test name.
+   - Watch mode and coverage commands when applicable.
+   - "How NOT to run" — at minimum: skipping the runner cache, mocking real code paths.
+6. **Expected output** — every `UT-N` PASS, no warnings, pristine stderr.
+7. **Related files** — implementation paths under `src/`, the spec path, `harness-kit:tdd/SKILL.md`.
+
+**Maintenance rule.** When you add or rename a `UT-N`, update the README's Test cases table in the same change. When you introduce a new env var or fixture, add the row in the same change. **Drifted README = task incomplete** — the verification checklist below rejects it.
+
+The README never replaces `harness-kit:tdd/SKILL.md` — it documents *how to run this module's tests*; the SKILL documents *the discipline that wrote them*.
+
 ## Why Order Matters
 
 **"I'll write tests after to verify it works"**
@@ -284,6 +326,7 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 - "Already spent X hours, deleting is wasteful"
 - "TDD is dogmatic, I'm being pragmatic"
 - "This is different because..."
+- New test file added without scaffolding / updating the test-module `README.md` in the same change (drifted README = task incomplete)
 
 **All of these mean: Delete code. Start over with TDD.**
 
@@ -336,6 +379,7 @@ Before marking work complete:
 - [ ] Output pristine (no errors, warnings)
 - [ ] Tests use real code (mocks only if unavoidable)
 - [ ] Edge cases and errors covered
+- [ ] Test module's `README.md` exists next to the tests, scaffolded from `templates/test-module.README.md.template`, with: every `UT-N` listed, the exact runner install + invocation commands, and an env-var table (or explicit `None.`) — no placeholder rows, no `TBD`
 
 Can't check all boxes? You skipped TDD. Start over.
 

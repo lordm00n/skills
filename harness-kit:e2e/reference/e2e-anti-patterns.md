@@ -465,7 +465,7 @@ BEFORE adding any of the following:
 
 **Consider:**
 - Extract setup into a `_setup_<feature>` shell function at the top of the same file (still one file per feature — don't split across files)
-- If duplication crosses features, that's a hint the spec lumped two features together — talk to `harness-kit:brainstorm`
+- If duplication crosses features, that's a hint the spec lumped two features together — talk to `harness-kit:spec-design`
 
 **What NOT to do:**
 - Add a test framework (Playwright, Vitest, etc.) — Q2 was decided: shell scripts only

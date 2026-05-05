@@ -26,7 +26,7 @@ This skill never embeds raw `agent-browser` commands. The browser/desktop capabi
 
 ## Terminology
 
-- **AS-N** — *Acceptance Scenario number N*. Each `AS-N` is one Given/When/Then bullet listed in the spec's `## E2E Strategy` section. Examples: `AS-1`, `AS-2`, `AS-3`. The label is also the dispatch key in the e2e script: `./tests/e2e/<feature>.sh AS-1` runs only the AS-1 branch. Numbering is sequential within a single feature; gaps are allowed if a scenario is removed during brainstorm revision.
+- **AS-N** — *Acceptance Scenario number N*. Each `AS-N` is one Given/When/Then bullet listed in the spec's `## E2E Strategy` section. Examples: `AS-1`, `AS-2`, `AS-3`. The label is also the dispatch key in the e2e script: `./tests/e2e/<feature>.sh AS-1` runs only the AS-1 branch. Numbering is sequential within a single feature; gaps are allowed if a scenario is removed during spec-design revision.
 - **Outside-In TDD** — outer e2e Red-Green-Refactor loop wrapping the inner unit Red-Green-Refactor loop from `harness-kit:tdd`. The outer loop drives "what does the user see", the inner loop drives "how does the code work".
 - **OUTER RED / OUTER GREEN** — the e2e (outer) phase of the cycle. Capitalised and prefixed `OUTER` to disambiguate from the inner unit-test RED/GREEN that `harness-kit:tdd` owns.
 - **Evidence** — anything written under `tests/e2e/.evidence/<feature>/<timestamp>-AS-N/` during a run: screenshots, a11y snapshots, video, and a `result.txt` with the exit code and last failing step.
@@ -204,6 +204,7 @@ Next `AS-N` from the spec, until the spec's `## E2E Strategy` list is exhausted.
 | Item | Value |
 |---|---|
 | Path | `tests/e2e/<feature>.sh` |
+| README | `tests/e2e/<feature>.README.md` (sibling, mandatory — see **Test README** below) |
 | One file per | feature (not per scenario) |
 | Scenario dispatch | first positional argument: `AS-N` |
 | Exit code | 0 = all assertions for that AS passed; non-zero = failed |
@@ -215,19 +216,48 @@ Single-AS invocation is the only supported form. There is no "run all scenarios"
 
 ## Script Skeleton
 
-To scaffold `tests/e2e/<feature>.sh`, copy the template (path is relative to wherever this skill is installed):
+To scaffold `tests/e2e/<feature>.sh` AND its sibling README, copy both templates (path is relative to wherever this skill is installed):
 
 ```bash
 SKILL_DIR=$(dirname "$(readlink -f "<path-to-this-SKILL.md>")")
 mkdir -p tests/e2e
-cp "${SKILL_DIR}/templates/feature.sh.template" "tests/e2e/<feature>.sh"
+cp "${SKILL_DIR}/templates/feature.sh.template"        "tests/e2e/<feature>.sh"
+cp "${SKILL_DIR}/templates/feature.README.md.template" "tests/e2e/<feature>.README.md"
 chmod +x "tests/e2e/<feature>.sh"
-# then replace `<feature>` placeholders inside the file
+# then replace `<feature>` placeholders in BOTH files
 ```
 
-The template ships with: `set -euo pipefail`, the evidence-dir setup, `AB_FLAGS="--auto-connect"`, the `_destructive_gate` helper (with `E2E_TS_OVERRIDE` support for Phase 2 re-dispatch), and a `case` skeleton with `AS-1`/`AS-2` placeholders.
+The script template ships with: `set -euo pipefail`, the evidence-dir setup, `AB_FLAGS="--auto-connect"`, the `_destructive_gate` helper (with `E2E_TS_OVERRIDE` support for Phase 2 re-dispatch), and a `case` skeleton with `AS-1`/`AS-2` placeholders.
 
-Once copied: replace each `<feature>` placeholder, then fill `case` branches with `agent-browser` calls — load the current syntax via `agent-browser skills get core`. Every call must include `${AB_FLAGS}`.
+The README template ships with: spec back-pointer, AS-N table, prerequisites (toolchain / system state / env vars), per-AS run commands with exit-code matrix, destructive two-phase flow, and a troubleshooting table. **It is not optional** — see **Test README** below.
+
+Once copied: replace each `<feature>` placeholder in both files, then fill the script's `case` branches with `agent-browser` calls (load the current syntax via `agent-browser skills get core`; every call must include `${AB_FLAGS}`) and align the README's AS-N table with what you implement.
+
+## Test README
+
+Every feature directory under `tests/e2e/` MUST ship a sibling `tests/e2e/<feature>.README.md`. It is the *operator's manual* for the feature's e2e — a fresh contributor (human or agent) must be able to run the scenarios from a cold checkout using only this file plus the project's standard dev-env setup.
+
+**Required sections (use the template — `templates/feature.README.md.template`):**
+
+1. **Header back-pointer** — links to the spec dir's `## E2E Strategy` and to `harness-kit:e2e/SKILL.md`.
+2. **What this feature tests** — one paragraph of user-visible behaviour, *not* implementation.
+3. **Acceptance Scenarios table** — every `AS-N` with its Given/When/Then summary and a `Destructive?` flag. Must stay aligned with the spec.
+4. **Prerequisites**:
+   - Toolchain (`agent-browser`, `bash`, etc.) with the exact `--version` check.
+   - The exact `agent-browser skills get core` (and `... electron`) re-load step.
+   - System state the script will NOT bring up itself (Chrome with `--remote-debugging-port`, the target app), with the exact launch commands.
+   - Env-var table (`E2E_TS_OVERRIDE`, `E2E_DESTRUCTIVE_ACK`, plus any feature-specific vars) with `Variable / Purpose / Required when / Default` columns. **No `...` rows. No "TBD".**
+5. **Running**:
+   - Single-AS invocation: `./tests/e2e/<feature>.sh AS-N`.
+   - Exit-code matrix (`0`, `64`, `75`, other) with the next step for each.
+   - Destructive two-phase flow with the exact `proceed-destructive <token>` reply and the `E2E_TS_OVERRIDE=… E2E_DESTRUCTIVE_ACK=…` re-dispatch line.
+   - "How NOT to run" — at minimum: missing AS arg, dropping `--auto-connect`, deleting evidence, running inline in the parent agent, hand-editing during the inner loop.
+6. **Troubleshooting table** — symptom → cause → fix, covering at least connection failure, target-app down, real RED vs a11y bug, unknown AS, ack-token mismatch.
+7. **Related files** — script path, spec path, SKILL.md, destructive-gate-protocol, subagent-protocol, anti-patterns.
+
+**Maintenance rule.** When you add or rename an `AS-N` in the script, update the README's Acceptance Scenarios table in the same change. When you introduce a new env var, add the row in the README's env-var table in the same change. **Drifted README = task incomplete** — verification will reject the run.
+
+The README never replaces `harness-kit:e2e/SKILL.md` — it documents *how to run this feature's tests*; the SKILL documents *the discipline that wrote them*.
 
 ## Connection Failure Protocol
 
@@ -398,6 +428,7 @@ Before declaring an `AS-N` done:
 - [ ] Other previously-green `AS-M` scenarios still pass
 - [ ] Evidence dir for this run exists under `tests/e2e/.evidence/<feature>/`
 - [ ] `.gitignore` covers `tests/e2e/.evidence/`
+- [ ] `tests/e2e/<feature>.README.md` exists and reflects the current script — Acceptance Scenarios table matches every implemented `case AS-N)` branch; env-var table covers every `${VAR:-…}` referenced by the script (no leftover placeholders, no `TBD`)
 - [ ] No `agent-browser` syntax invented from memory — every command came from `skills get core` content read in this session
 - [ ] Any destructive action went through the confirmation gate; `destructive_actions_attempted` accurately reflects what happened
 - [ ] Subagent's JSON report has `auto_connect_used: true`
@@ -434,6 +465,7 @@ Cannot check all boxes? You skipped the discipline. Restart from OUTER RED.
 - Wrote `agent-browser ...` without loading `skills get core` in this session
 - Connection error treated as RED
 - Script created without checking `.gitignore`
+- Script created or extended without scaffolding / updating `tests/e2e/<feature>.README.md` in the same change (drifted README = task incomplete)
 
 All of these mean: stop, undo, restart from the right step.
 

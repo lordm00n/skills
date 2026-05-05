@@ -7,6 +7,12 @@ description: Acquire strict context from documents in .agent/ directory of the c
 
 **Goal**: Produce a self-contained context document for `harness-kit:spec-design` skill.
 
+## User requirenments
+
+```text
+$ARGUMENTS
+```
+
 ## What the context document contains
 
 **Top level summary**:
