@@ -1,5 +1,5 @@
 ---
-name: harness-kit:execute-plans
+name: harness-kit:execute-plan
 description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
 ---
 
@@ -16,6 +16,7 @@ Load plan, review critically, execute all tasks, report when complete.
 ## The Process
 
 ### Step 1: Load and Review Plan
+
 1. Read plan file
 2. Review critically - identify any questions or concerns about the plan
 3. If concerns: Raise them with your human partner before starting
@@ -36,10 +37,9 @@ For each task:
 
 ### Step 3: Complete Development
 
-After all tasks complete and verified:
-- Announce: "I'm using the harness-kit:finishing-a-development-branch skill to complete this work."
-- **REQUIRED SUB-SKILL:** Use harness-kit:finishing-a-development-branch
-- That skill will re-verify tests + e2e, sanity-check the e2e evidence is gitignored, then report completion. It will not merge, push, open PRs, or remove anything — whatever the user wants to do next is plain chat after the report.
+After all tasks complete:
+
+Re-verify tests + e2e, sanity-check the e2e evidence is gitignored, then report completion. It will not merge, push, open PRs, or remove anything — whatever the user wants to do next is plain chat after the report.
 
 ## When to Stop and Ask for Help
 
@@ -60,6 +60,7 @@ After all tasks complete and verified:
 **Don't force through blockers** - stop and ask.
 
 ## Remember
+
 - Review plan critically first
 - Follow plan steps exactly
 - Don't skip verifications
@@ -68,10 +69,3 @@ After all tasks complete and verified:
 - Stop at every task boundary — emit the `Report task completion` message and wait for the user before starting the next task
 - Never run `git commit` / `git push` / `git merge` / `gh pr create` on the user's behalf
 - Never start implementation on main/master branch without explicit user consent
-
-## Integration
-
-**Required workflow skills:**
-- **harness-kit:writing-plans** - Creates the plan this skill executes
-- **harness-kit:finishing-a-development-branch** - Complete development after all tasks
-- **harness-kit:test-driven-development** - Follow TDD workflow to develop features.

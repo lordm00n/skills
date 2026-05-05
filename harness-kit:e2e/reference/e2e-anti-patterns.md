@@ -8,7 +8,7 @@ E2E tests verify what the user actually experiences, end-to-end, with real brows
 
 **Core principle:** If the test could pass while the real user experience was broken, it is not a real e2e.
 
-**Following the Iron Law of `harness-kit:e2e-testing` prevents most of these. The rest are about not weakening the script under pressure.**
+**Following the Iron Law of `harness-kit:e2e` prevents most of these. The rest are about not weakening the script under pressure.**
 
 ## The Iron Laws
 

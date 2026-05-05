@@ -4,7 +4,7 @@
 # E2E scenarios for <feature>. Driven by agent-browser, attached to
 # the user's running Chrome via --auto-connect.
 #
-# See harness-kit:e2e-testing/SKILL.md for:
+# See harness-kit:e2e/SKILL.md for:
 #   - Why we attach to the user's Chrome (Browser Session Strategy)
 #   - The two-phase destructive-action gate (destructive-gate-protocol.md)
 #   - The subagent dispatch protocol  (subagent-protocol.md)

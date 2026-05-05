@@ -13,7 +13,7 @@ e2e-subagent task for feature `<feature>`.
 
 Read this skill in full, then execute the Outside-In Cycle for the
 listed scenarios:
-  - Skill: /Users/<you>/.agents/skills/harness-kit:e2e-testing/SKILL.md
+  - Skill: /Users/<you>/.agents/skills/harness-kit:e2e/SKILL.md
   - Spec (## E2E Strategy section): docs/harness-kit/specs/<spec>.md
   - Scenarios to run: AS-1, AS-3
   - Feature: <feature>

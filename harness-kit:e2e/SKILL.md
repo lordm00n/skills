@@ -1,5 +1,5 @@
 ---
-name: harness-kit:e2e-testing
+name: harness-kit:e2e
 description: Use when implementing user-visible behavior (Web UI, Electron desktop app) — drives the outer Outside-In TDD loop with agent-browser as the only browser/desktop driver. Triggered by the spec's `## E2E Strategy` section listing one or more `AS-N` acceptance scenarios. Skip when the spec marks E2E Strategy as `EXEMPT`.
 ---
 
@@ -7,7 +7,7 @@ description: Use when implementing user-visible behavior (Web UI, Electron deskt
 
 ## Overview
 
-This is the **outer** TDD loop. The inner loop is `harness-kit:test-driven-development` (unit tests). Together they form Outside-In TDD:
+This is the **outer** TDD loop. The inner loop is `harness-kit:tdd` (unit tests). Together they form Outside-In TDD:
 
 ```
 RED (e2e: AS-N fails)
@@ -26,9 +26,9 @@ This skill never embeds raw `agent-browser` commands. The browser/desktop capabi
 
 ## Terminology
 
-- **AS-N** — *Acceptance Scenario number N*. Each `AS-N` is one Given/When/Then bullet listed in the spec's `## E2E Strategy` section, produced by `harness-kit:brainstorm`. Examples: `AS-1`, `AS-2`, `AS-3`. The label is also the dispatch key in the e2e script: `./tests/e2e/<feature>.sh AS-1` runs only the AS-1 branch. Numbering is sequential within a single feature; gaps are allowed if a scenario is removed during brainstorm revision.
-- **Outside-In TDD** — outer e2e Red-Green-Refactor loop wrapping the inner unit Red-Green-Refactor loop from `harness-kit:test-driven-development`. The outer loop drives "what does the user see", the inner loop drives "how does the code work".
-- **OUTER RED / OUTER GREEN** — the e2e (outer) phase of the cycle. Capitalised and prefixed `OUTER` to disambiguate from the inner unit-test RED/GREEN that `harness-kit:test-driven-development` owns.
+- **AS-N** — *Acceptance Scenario number N*. Each `AS-N` is one Given/When/Then bullet listed in the spec's `## E2E Strategy` section. Examples: `AS-1`, `AS-2`, `AS-3`. The label is also the dispatch key in the e2e script: `./tests/e2e/<feature>.sh AS-1` runs only the AS-1 branch. Numbering is sequential within a single feature; gaps are allowed if a scenario is removed during brainstorm revision.
+- **Outside-In TDD** — outer e2e Red-Green-Refactor loop wrapping the inner unit Red-Green-Refactor loop from `harness-kit:tdd`. The outer loop drives "what does the user see", the inner loop drives "how does the code work".
+- **OUTER RED / OUTER GREEN** — the e2e (outer) phase of the cycle. Capitalised and prefixed `OUTER` to disambiguate from the inner unit-test RED/GREEN that `harness-kit:tdd` owns.
 - **Evidence** — anything written under `tests/e2e/.evidence/<feature>/<timestamp>-AS-N/` during a run: screenshots, a11y snapshots, video, and a `result.txt` with the exit code and last failing step.
 - **Connection failure** — agent-browser cannot attach to a running Chrome (Mode A) **or** Chrome is up but the target app is unreachable (Mode B). Neither is a valid OUTER RED — see the **Connection Failure Protocol** section below.
 - **`--auto-connect`** — the agent-browser flag that attaches to the user's already-running Chrome instead of spawning a fresh one. Mandatory on every `agent-browser` invocation in an e2e script. Codified as `AB_FLAGS` in the script skeleton. See the **Loading agent-browser** and **Browser Session Strategy** sections.
@@ -43,9 +43,7 @@ This skill never embeds raw `agent-browser` commands. The browser/desktop capabi
 - Bug fix with a user-visible reproduction path
 - Behavior change visible in the UI
 
-**Skip** when the spec's `## E2E Strategy` section is marked `EXEMPT: <reason>` (e.g. pure backend API, internal CLI, batch script). The exemption must already be approved during `harness-kit:brainstorm`.
-
-If the spec has no `## E2E Strategy` section at all: **STOP**. Send the work back to `harness-kit:brainstorm` to fill it in. Do not invent scenarios on the fly.
+**Skip** when the spec's `## E2E Strategy` section is marked `EXEMPT: <reason>` (e.g. pure backend API, internal CLI, batch script).
 
 ## The Iron Law
 
@@ -117,13 +115,13 @@ When you (parent) need to run e2e for one or more `AS-N`:
 1. Pick a `subagent_type`:
    - **`shell`** (default) — when the script already exists and you only need to run it
    - **`generalPurpose`** — when the subagent must read the spec, write/extend `tests/e2e/<feature>.sh`, or do anything beyond shell execution
-2. Build the dispatch prompt — see [`subagent-protocol.md → Dispatch Prompt Template`](./subagent-protocol.md#dispatch-prompt-template). The prompt must contain the `e2e-subagent` marker, this skill's full path, the feature name, the exact `AS-N` list, and the path to the spec's `## E2E Strategy` section.
+2. Build the dispatch prompt — see [`reference/subagent-protocol.md → Dispatch Prompt Template`](./reference/subagent-protocol.md#dispatch-prompt-template). The prompt must contain the `e2e-subagent` marker, this skill's full path, the feature name, the exact `AS-N` list, and the path to the spec's `## E2E Strategy` section.
 3. Wait for the subagent's JSON report.
-4. Interpret the report per [`subagent-protocol.md → Parent's Handling Rules`](./subagent-protocol.md#parents-handling-rules) — typically that means passing it into `harness-kit:verification-before-completion`, but `AWAITING_DESTRUCTIVE_ACK` triggers the two-phase flow in `destructive-gate-protocol.md`.
+4. Interpret the report per [`reference/subagent-protocol.md → Parent's Handling Rules`](./reference/subagent-protocol.md#parents-handling-rules) — typically that means verifying the evidence, but `AWAITING_DESTRUCTIVE_ACK` triggers the two-phase flow in `reference/destructive-gate-protocol.md`.
 
 ### Subagent Report — at a glance
 
-The subagent returns ONE JSON block with `feature`, `scenarios[]` (each with `as`, `exit_code`, `evidence_dir`, `phase`, `failing_step`, `destructive_pending`), `auto_connect_used`, `destructive_actions_attempted`, `notes`. Full schema, field rules, and parent handling matrix live in [`subagent-protocol.md`](./subagent-protocol.md).
+The subagent returns ONE JSON block with `feature`, `scenarios[]` (each with `as`, `exit_code`, `evidence_dir`, `phase`, `failing_step`, `destructive_pending`), `auto_connect_used`, `destructive_actions_attempted`, `notes`. Full schema, field rules, and parent handling matrix live in [`reference/subagent-protocol.md`](./reference/subagent-protocol.md).
 
 Hard invariants (reject the report otherwise):
 - `auto_connect_used` MUST be `true`
@@ -178,7 +176,7 @@ Confirm:
 
 ### INNER LOOP — Drive the implementation with unit TDD
 
-Hand off to `harness-kit:test-driven-development`. Follow its Red-Green-Refactor cycle until the functionality the scenario needs is in place. Do not touch the e2e script during this phase.
+Hand off to `harness-kit:tdd`. Follow its Red-Green-Refactor cycle until the functionality the scenario needs is in place. Do not touch the e2e script during this phase.
 
 ### OUTER GREEN — Re-run the scenario
 
@@ -213,7 +211,7 @@ Next `AS-N` from the spec, until the spec's `## E2E Strategy` list is exhausted.
 | Re-runnable | yes — must be safe to call twice in a row |
 | Side effects on real systems | possible by design (`--auto-connect` shares user state) — every destructive call MUST go through the confirmation gate (see **Browser Session Strategy**) |
 
-Single-AS invocation is the only supported form. There is no "run all scenarios" mode at the script level — that is `harness-kit:finishing-a-development-branch`'s job (it iterates `AS-N` from the spec).
+Single-AS invocation is the only supported form. There is no "run all scenarios" mode at the script level — that job belongs to a separate orchestration step (it iterates `AS-N` from the spec).
 
 ## Script Skeleton
 
@@ -281,11 +279,11 @@ Every run of `./tests/e2e/<feature>.sh AS-N` writes into `tests/e2e/.evidence/<f
 - Video recording (if agent-browser is configured for it)
 - A plain-text `result.txt` with the exit code and the last failing step description
 
-This directory is the **only** acceptable evidence that a scenario "just ran" — `harness-kit:verification-before-completion` will check the latest timestamp under it before accepting any "feature complete" claim.
+This directory is the **only** acceptable evidence that a scenario "just ran" — verification will check the latest timestamp under it before accepting any "feature complete" claim.
 
 **Retention rules:**
 - Stays on disk during the entire feature's development.
-- Never enters git. Initial gate: **First-Run Setup** below (refuses to scaffold without `.gitignore` coverage). Late sanity-check: `harness-kit:finishing-a-development-branch` Step 2 (warns if the gitignore drifted or any evidence path got tracked anyway).
+- Never enters git. Initial gate: **First-Run Setup** below (refuses to scaffold without `.gitignore` coverage). Late sanity-check: verification step (warns if the gitignore drifted or any evidence path got tracked anyway).
 - Disk cleanup is the user's call — `rm -rf tests/e2e/.evidence/<feature>/` whenever they want. No skill in harness-kit deletes evidence on the user's behalf. Sleeves of evidence accumulating across features is intentional; it gives the user a complete debugging trail until they explicitly clear it.
 
 ## First-Run Setup
@@ -307,7 +305,7 @@ Before creating `tests/e2e/<feature>.sh` for the first time in a project, agent 
    >
    > OK to append? (yes / no)
 
-5. On `yes`: append the line and the comment `# harness-kit:e2e-testing — runtime evidence, never commit`. **Do NOT commit `.gitignore` yourself.** Tell the user:
+5. On `yes`: append the line and the comment `# harness-kit:e2e — runtime evidence, never commit`. **Do NOT commit `.gitignore` yourself.** Tell the user:
 
    > `.gitignore` updated to exclude `tests/e2e/.evidence/`.
    >
@@ -353,7 +351,7 @@ If you can write the AS without any destructive action — **do**. The gate exis
 
 **The protocol in one paragraph:** every destructive line is preceded by `_destructive_gate "<desc>" "<resource>"` (helper ships in `templates/feature.sh.template`). On Phase 1, the helper emits `DESTRUCTIVE_GATE: ...` to stdout and `exit 75` (EX_TEMPFAIL); the subagent reports `phase: "AWAITING_DESTRUCTIVE_ACK"` with the `ack_token`; the parent surfaces the request to the user; the user replies with the literal `proceed-destructive <ack_token>`; the parent re-dispatches with `E2E_DESTRUCTIVE_ACK=<token>` (and `E2E_TS_OVERRIDE=<original-ts>`) so the helper matches and the destructive line runs.
 
-Full protocol — script / subagent / parent sides, edge cases, common failure modes — lives in [`destructive-gate-protocol.md`](./destructive-gate-protocol.md). Read that file before implementing or debugging a destructive AS.
+Full protocol — script / subagent / parent sides, edge cases, common failure modes — lives in [`reference/destructive-gate-protocol.md`](./reference/destructive-gate-protocol.md). Read that file before implementing or debugging a destructive AS.
 
 Multiple destructive gates in one AS = multiple round-trips. Each gate gets its own token. That's intentional — agreeing to delete an account does not transitively authorize deleting their org five steps later.
 
@@ -373,7 +371,7 @@ The agent MUST NOT read, copy, or echo any credential out of agent-browser's aut
 
 ## Anti-Patterns
 
-When writing or changing e2e scripts, read [`e2e-anti-patterns.md`](./e2e-anti-patterns.md) for the full list. The most lethal ones:
+When writing or changing e2e scripts, read [`reference/e2e-anti-patterns.md`](./reference/e2e-anti-patterns.md) for the full list. The most lethal ones:
 
 - Using `sleep` to wait for UI (use a11y / element-wait primitives from `agent-browser skills get core`)
 - Hardcoded pixel coordinates or CSS-selector / xpath fallbacks
@@ -395,7 +393,7 @@ Before declaring an `AS-N` done:
 - [ ] Every `agent-browser` invocation in the script uses `${AB_FLAGS}` (= `--auto-connect`)
 - [ ] Wrote the script branch first, watched it fail
 - [ ] Failure was at the expected step, not a connection error
-- [ ] Hand-off to `harness-kit:test-driven-development` for the inner loop happened explicitly
+- [ ] Hand-off to `harness-kit:tdd` for the inner loop happened explicitly
 - [ ] Re-ran the script after the inner loop, saw exit 0
 - [ ] Other previously-green `AS-M` scenarios still pass
 - [ ] Evidence dir for this run exists under `tests/e2e/.evidence/<feature>/`
@@ -438,23 +436,6 @@ Cannot check all boxes? You skipped the discipline. Restart from OUTER RED.
 - Script created without checking `.gitignore`
 
 All of these mean: stop, undo, restart from the right step.
-
-## Integration
-
-**Called by:**
-- `harness-kit:execute-plans` — when the plan's outer task type is e2e (Outside-In template)
-
-**Calls:**
-- `harness-kit:test-driven-development` — for the inner loop
-- agent-browser CLI — `agent-browser skills get core` (always), `... electron` (when target is Electron)
-
-**Inputs from:**
-- `harness-kit:brainstorm` — produces the spec's `## E2E Strategy` section with the `AS-N` list (or `EXEMPT`)
-- `harness-kit:writing-plans` — wraps each `AS-N` into an Outside-In task block
-
-**Outputs consumed by:**
-- `harness-kit:verification-before-completion` — checks evidence dir for fresh runs of every `AS-N`
-- `harness-kit:finishing-a-development-branch` — Step 1.5 re-runs all `AS-N`; Step 2 sanity-checks `.gitignore` still covers `tests/e2e/.evidence/` (warns on drift, never deletes)
 
 ## The Bottom Line
 
