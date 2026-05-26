@@ -1,0 +1,26 @@
+---
+name: harness:grill-me
+description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me".
+---
+
+# Grill me
+
+## Request
+
+```text
+$ARGUMENTS
+```
+
+## Instructions
+
+Interview me relentlessly about every aspect of this request until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one.
+
+Ask the questions once at a time.
+
+If a question can be answered by exploring the codebase, explore the codebase instead.
+
+For each question, give three approaches for me to choose, and recommend the most suitable one to me.
+
+<HARD-GATE>
+Do not use the provided ask question tool for these questions. Just ask me questions in the conversation.
+</HARD-GATE>
