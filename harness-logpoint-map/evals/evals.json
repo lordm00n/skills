@@ -1,0 +1,47 @@
+{
+  "skill_name": "harness-logpoint-map",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "给这个仓库整理 CR 审核合入的日志地图，放到 docs/logpoints.md。只要场景和代码里的可搜索日志文案，不要其他说明。不要收录驳回、批量审核或导出功能，也不要改业务代码。",
+      "expected_output": "一个仓库级 Markdown 文件，仅包含 CR 审核合入章节和两列表格；消息片段与源码一致，覆盖三种结果，不收录相邻无关功能。",
+      "files": ["evals/files/build-map"],
+      "expectations": [
+        "Only one docs/logpoints.md is created, with a feature heading and a two-column scenario/log-text table, without extra metadata or detail sections.",
+        "The three approve outcomes (rejected_400, error, merged) are represented using exact fixed fragments from reviews.py.",
+        "The merged scenario describes merge returning normally, without claiming that the client received a response.",
+        "Reject, batch-approve and export logging calls are not included.",
+        "Search cells do not include runtime formatting placeholders or invented concatenated phrases.",
+        "The business source snapshot remains byte-for-byte unchanged."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "根据 before 和 after 代码快照，同步 existing-logpoints.md 中 CR 审核合入这一章，输出更新后的 docs/logpoints.md。审核异常文案改了，合入完成改成异步排队，旧调试日志删了。其他功能不要重新整理，我写的备注也保留。",
+      "expected_output": "异常行文案及成功行场景得到更新，已删除调试行移除，无关章节和人工备注原样保留，不新增元数据或修改源码。",
+      "files": ["evals/files/update-map"],
+      "expectations": [
+        "The error row uses review_failure action=approve instead of the removed review_action/result=error fragments.",
+        "The deleted review_persisted row is absent from the active map.",
+        "The review_finished scenario describes enqueue returning or task submission, not completed merging.",
+        "The unrelated file-export chapter is byte-for-byte identical to the original.",
+        "Both pre-existing manual remarks are preserved exactly.",
+        "No extra document fields or per-feature files are introduced, and both source snapshots remain unchanged."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "在现有 docs/logpoints.md 里补上预览功能的日志，入口是 preview。仍然只要场景和日志文案，不要给我建议新增的日志，也不要改代码。",
+      "expected_output": "源码中 preview 没有日志，明确反馈没有现有埋点，不借用同文件 export 的日志，不创建空章节，现有地图和源码不变。",
+      "files": ["evals/files/no-logs"],
+      "expectations": [
+        "The existing docs/logpoints.md remains byte-for-byte unchanged.",
+        "No preview section or log row is invented, and export_started is not misclassified as a preview log.",
+        "The user-facing reply explicitly states that preview has no existing logging statement.",
+        "The exports.py source snapshot remains byte-for-byte unchanged.",
+        "No proposed new logging message is presented as an existing log.",
+        "No empty chapter, placeholder map or separate feature document is created."
+      ]
+    }
+  ]
+}

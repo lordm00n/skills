@@ -1,0 +1,46 @@
+{
+  "skill_name": "harness-no-silent-failures",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我用 React + TypeScript 写一个图片上传组件：用户可以点选或拖拽多张图片，选完显示缩略图预览，点「开始上传」后逐张调用一个假想的 upload(file) 接口上传，显示每张的进度。先不管后端，接口你 mock 就好。",
+      "expected_output": "在实现基础上传功能之外，主动补齐边界：选择前提示支持格式与大小上限；.heic 等不支持格式在选择时即被拦下并点名提示（不是静默丢弃或上传后才失败）；超出数量/大小上限有计数与说明且已选图片不丢失；批量上传部分失败时逐项显示原因并可仅重试失败项；上传中防重复提交，所有异步路径有明确终点。回复结尾有一份「边界处理 / 需确认的假设」清单，未擅自发明的上限会被标为假设。",
+      "files": [],
+      "expectations": [
+        "Output states supported formats and size limit near the upload entry before selection (prevention hint)",
+        "Selecting an unsupported format (e.g. .heic) produces a visible message naming the file and the supported formats, instead of silently ignoring it",
+        "Exceeding a count or size limit produces an explicit message and previously selected files are preserved",
+        "Partial batch failure is reported per-file with reasons and a retry-failed-only path, not a single generic failure",
+        "No user-triggered path is swallowed: no empty catch / silent return as the only handling for upload errors",
+        "The final reply includes a boundary-coverage list and flags any invented limit (e.g. max size/count) as an assumption to confirm"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "给我写一个「新建项目」的表单页面（React 就行）：字段有项目名称、负责人、描述，提交后调 createProject 接口创建，成功后跳回项目列表。免费版用户最多只能有 3 个项目，这个限制后端会返回错误码 QUOTA_EXCEEDED，前端暂时还没处理。",
+      "expected_output": "表单具备字段级校验与错误定位（名称为空/重复等就近提示、提交失败不清空已填内容）；免费版 3 个项目上限在到达前/到达时可见并给出删除旧项目或升级的出口，而不是等后端报错后给一个笼统失败；接口返回 QUOTA_EXCEEDED / 重名 / 网络错误时分别翻译成用户能懂、能行动的提示（含重试路径）；提交中防重复提交。结尾列出补齐的边界与假设。",
+      "files": [],
+      "expectations": [
+        "Form validation errors appear inline near their fields and focus moves to the first error, not only a toast or generic failure",
+        "A failed submit preserves the user's entered values",
+        "The 3-project free quota is surfaced with a next step (delete one or upgrade) rather than only surfacing a raw QUOTA_EXCEEDED/backend error",
+        "Duplicate-name and network/server failures each get distinct human-readable messages with a recovery action",
+        "Submit button prevents duplicate submission while the request is in flight",
+        "The final reply includes a boundary-coverage list"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "帮我写一个订单列表页：顶部有搜索框和状态筛选，下面是订单表格，数据从 getOrders 接口分页拉取。简单实现就行，我主要想先把列表跑起来看看效果。",
+      "expected_output": "列表跑通之外，区分并实现：加载中（骨架/loading且不闪「暂无数据」）、首次无订单的空状态（说明+去创建的 CTA）、搜索/筛选无结果（点名关键词+清除筛选）、接口失败（说明+保留筛选条件+重试）、会话过期不静默丢弃当前筛选与页码。结尾列出补齐的边界。即使 prompt 说「简单实现」，也不省略这些用户必然会撞到的状态。",
+      "files": [],
+      "expectations": [
+        "Loading state is shown while fetching and does not flash an empty/'no data' message",
+        "First-use empty state differs from no-search-results state, each with an appropriate next action (create CTA vs clear filters)",
+        "Fetch failure shows a human-readable message with a retry action and preserves current search/filter/page state",
+        "No-results message names the query/filter context instead of a bare 'no data'",
+        "The final reply includes a boundary-coverage list"
+      ]
+    }
+  ]
+}
